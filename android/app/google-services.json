@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "360230062506",
+    "project_id": "myheart-38164",
+    "storage_bucket": "myheart-38164.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:360230062506:android:c96252a74ac98dbdedc3d3",
+        "android_client_info": {
+          "package_name": "com.example.giamsat_suckhoe"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBPcUS-ZoJAPD5IG-1WAiemiuaVf04ZS84"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
