@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import '../widgets/charts/health_chart.dart';
 
 class HealthScreen extends StatefulWidget {
-  const HealthScreen({Key? key}) : super(key: key);
+  const HealthScreen({super.key});
 
   @override
   State<HealthScreen> createState() => _HealthScreenState();
@@ -43,7 +43,7 @@ class _HealthScreenState extends State<HealthScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: Colors.redAccent,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -71,7 +71,7 @@ class _HealthScreenState extends State<HealthScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Đã lưu dữ liệu thành công!'),
-          backgroundColor: Colors.green,
+          backgroundColor: Color(0xFF2575FC),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -83,208 +83,235 @@ class _HealthScreenState extends State<HealthScreen> {
   }
 
   String? _validateNumber(String? value, String fieldName) {
-    if (value == null || value.isEmpty) {
-      return 'Vui lòng nhập $fieldName';
-    }
-    if (double.tryParse(value) == null) {
-      return '$fieldName phải là số';
-    }
+    if (value == null || value.isEmpty) return 'Vui lòng nhập $fieldName';
+    if (double.tryParse(value) == null) return '$fieldName phải là số';
     return null;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.teal[50],
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Giám sát sức khỏe'),
-        backgroundColor: Colors.teal,
+        title: const Text(
+          'Giám sát sức khỏe',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadData),
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: _loadData,
+          ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _loadData,
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                // Thêm biểu đồ ở đây
-                if (_healthData.isNotEmpty)
-                  HealthChart(
-                    data: _healthData,
-                    title: 'Số bước chân 7 ngày qua',
-                    lineColor: Colors.teal,
-                  ),
-                const SizedBox(height: 16),
-                Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Card(
-                        elevation: 4,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SafeArea(
+          child: RefreshIndicator(
+            onRefresh: _loadData,
+            color: const Color(0xFF2575FC),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  if (_healthData.isNotEmpty)
+                    Card(
+                      elevation: 6,
+                      shadowColor: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withOpacity(0.9),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: HealthChart(
+                          data: _healthData,
+                          title: 'Số bước chân 7 ngày qua',
+                          lineColor: const Color(0xFF2575FC),
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Nhập dữ liệu mới',
-                                style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                  const SizedBox(height: 25),
+
+                  // 🔹 Form nhập liệu
+                  Card(
+                    elevation: 6,
+                    shadowColor: Colors.black26,
+                    color: Colors.white.withOpacity(0.95),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const Text(
+                              'Thêm dữ liệu mới',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2575FC),
                               ),
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                controller: _stepsCtrl,
-                                decoration: InputDecoration(
-                                  labelText: 'Số bước chân',
-                                  prefixIcon: const Icon(Icons.directions_walk),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
+                            ),
+                            const SizedBox(height: 20),
+                            _buildInputField(
+                              controller: _stepsCtrl,
+                              label: 'Số bước chân',
+                              icon: Icons.directions_walk,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildInputField(
+                              controller: _weightCtrl,
+                              label: 'Cân nặng (kg)',
+                              icon: Icons.monitor_weight,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildInputField(
+                              controller: _sleepCtrl,
+                              label: 'Giờ ngủ',
+                              icon: Icons.bedtime,
+                            ),
+                            const SizedBox(height: 20),
+                            ElevatedButton(
+                              onPressed: _loading ? null : _saveData,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF2575FC),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                                keyboardType: TextInputType.number,
-                                validator: (value) =>
-                                    _validateNumber(value, 'số bước'),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                elevation: 3,
                               ),
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                controller: _weightCtrl,
-                                decoration: InputDecoration(
-                                  labelText: 'Cân nặng (kg)',
-                                  prefixIcon: const Icon(Icons.monitor_weight),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                keyboardType: TextInputType.number,
-                                validator: (value) =>
-                                    _validateNumber(value, 'cân nặng'),
-                              ),
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                controller: _sleepCtrl,
-                                decoration: InputDecoration(
-                                  labelText: 'Giờ ngủ',
-                                  prefixIcon: const Icon(Icons.bedtime),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                keyboardType: TextInputType.number,
-                                validator: (value) =>
-                                    _validateNumber(value, 'giờ ngủ'),
-                              ),
-                              const SizedBox(height: 20),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed: _loading ? null : _saveData,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.teal,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 16,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                  child: _loading
-                                      ? const SizedBox(
-                                          height: 20,
-                                          width: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            valueColor:
-                                                AlwaysStoppedAnimation<Color>(
-                                                  Colors.white,
-                                                ),
-                                          ),
-                                        )
-                                      : const Text(
-                                          'LƯU DỮ LIỆU',
-                                          style: TextStyle(fontSize: 16),
+                              child: _loading
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                          Colors.white,
                                         ),
+                                      ),
+                                    )
+                                  : const Text(
+                                      'LƯU DỮ LIỆU',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 1,
+                                      ),
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 25),
+
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Lịch sử giám sát',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // 🔹 Danh sách dữ liệu
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _healthData.length,
+                    itemBuilder: (context, index) {
+                      final data = _healthData[index];
+                      return Card(
+                        color: Colors.white.withOpacity(0.95),
+                        elevation: 4,
+                        shadowColor: Colors.black26,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.all(16),
+                          title: Row(
+                            children: [
+                              const Icon(Icons.calendar_today,
+                                  color: Color(0xFF2575FC), size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                DateFormat('dd/MM/yyyy').format(data.date),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
                                 ),
                               ),
                             ],
                           ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 8),
+                              _buildDataRow(Icons.directions_walk, 'Số bước:',
+                                  '${data.steps}'),
+                              _buildDataRow(Icons.monitor_weight, 'Cân nặng:',
+                                  '${data.weight} kg'),
+                              _buildDataRow(Icons.bedtime, 'Giấc ngủ:',
+                                  '${data.sleepHours}h'),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Lịch sử giám sát',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.teal[900],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _healthData.length,
-                        itemBuilder: (context, index) {
-                          final data = _healthData[index];
-                          return Card(
-                            elevation: 2,
-                            margin: const EdgeInsets.only(bottom: 8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.all(16),
-                              title: Row(
-                                children: [
-                                  Icon(
-                                    Icons.calendar_today,
-                                    color: Colors.teal[700],
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    DateFormat('dd/MM/yyyy').format(data.date),
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const SizedBox(height: 8),
-                                  _buildDataRow(
-                                    Icons.directions_walk,
-                                    'Số bước:',
-                                    '${data.steps}',
-                                  ),
-                                  _buildDataRow(
-                                    Icons.monitor_weight,
-                                    'Cân nặng:',
-                                    '${data.weight} kg',
-                                  ),
-                                  _buildDataRow(
-                                    Icons.bedtime,
-                                    'Giấc ngủ:',
-                                    '${data.sleepHours}h',
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
+                      );
+                    },
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+  }) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: const Color(0xFF2575FC)),
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+      ),
+      keyboardType: TextInputType.number,
+      validator: (value) => _validateNumber(value, label),
     );
   }
 
@@ -293,11 +320,13 @@ class _HealthScreenState extends State<HealthScreen> {
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: Colors.grey[600]),
-          const SizedBox(width: 4),
-          Text(label),
-          const SizedBox(width: 4),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
+          Icon(icon, size: 18, color: const Color(0xFF2575FC)),
+          const SizedBox(width: 8),
+          Text(label, style: const TextStyle(color: Colors.black87)),
+          const SizedBox(width: 6),
+          Text(value,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w600, color: Colors.black)),
         ],
       ),
     );

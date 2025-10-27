@@ -17,7 +17,7 @@ class AuthController {
         password: password,
         name: name,
       );
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException {
       rethrow;
     } catch (_) {
       // <-- sửa tại đây
@@ -37,7 +37,7 @@ class AuthController {
         throw Exception('Login returned null user.');
       }
       return user;
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException {
       rethrow;
     } catch (e) {
       rethrow;
@@ -47,7 +47,7 @@ class AuthController {
   Future<void> forgotPassword(String email) async {
     try {
       await _firebaseService.resetPassword(email: email);
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException {
       rethrow;
     } catch (e) {
       throw Exception('Forgot password error: $e');
