@@ -4,6 +4,7 @@ import '../models/health_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import '../widgets/charts/health_chart.dart';
+import '../services/notification_service.dart'; // 🟢 dùng file service duy nhất
 
 class HealthScreen extends StatefulWidget {
   const HealthScreen({super.key});
@@ -20,6 +21,10 @@ class _HealthScreenState extends State<HealthScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _loading = false;
   List<HealthData> _healthData = [];
+
+  // 🟢 Nhắc nhở uống nước
+  int _selectedInterval = 0;
+  final List<int> _intervalOptions = [0, 30, 45, 60];
 
   @override
   void initState() {
@@ -127,8 +132,8 @@ class _HealthScreenState extends State<HealthScreen> {
                   if (_healthData.isNotEmpty)
                     Card(
                       elevation: 6,
-                      shadowColor: Colors.white.withOpacity(0.2),
-                      color: Colors.white.withOpacity(0.9),
+                      shadowColor: Colors.white.withValues(alpha: 0.2),
+                      color: Colors.white.withValues(alpha: 0.9),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
@@ -143,11 +148,212 @@ class _HealthScreenState extends State<HealthScreen> {
                     ),
                   const SizedBox(height: 25),
 
-                  // 🔹 Form nhập liệu
+                  // 💧 Nhắc uống nước
+                  Card(
+                    elevation: 6,
+                    shadowColor: Colors.black.withValues(alpha: 0.2),
+                    color: Colors.white.withValues(alpha: 0.95),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            '💧 Nhắc uống nước',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2575FC),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          const Text(
+                            'Chọn tần suất nhắc uống nước để đạt 2 lít mỗi ngày:',
+                            style: TextStyle(color: Colors.black87),
+                          ),
+                          const SizedBox(height: 15),
+                          DropdownButtonFormField<int>(
+                            initialValue: _selectedInterval,
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
+                            items: _intervalOptions
+                                .map(
+                                  (val) => DropdownMenuItem<int>(
+                                    value: val,
+                                    child: Text(val == 0
+                                        ? 'Tắt nhắc nhở'
+                                        : 'Mỗi $val phút'),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (val) async {
+                              setState(() => _selectedInterval = val ?? 0);
+                              if (val != null && val > 0) {
+                                await NotificationService.instance
+                                    .scheduleWaterReminders(val);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Đã bật nhắc uống nước mỗi $val phút',
+                                        style: const TextStyle(
+                                            color: Colors.white),
+                                      ),
+                                      backgroundColor: const Color(0xFF2575FC),
+                                    ),
+                                  );
+                                }
+                              } else {
+                                await NotificationService.instance
+                                    .showInstantNotification(
+                                  '💧 Nhắc uống nước',
+                                  'Đã tắt nhắc nhở.',
+                                );
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 25),
+                  // 😴 Nhắc ngủ đúng giờ
                   Card(
                     elevation: 6,
                     shadowColor: Colors.black26,
                     color: Colors.white.withOpacity(0.95),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            '😴 Nhắc ngủ đúng giờ',
+                            style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2575FC)),
+                          ),
+                          const SizedBox(height: 10),
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              await NotificationService.instance
+                                  .scheduleSleepReminder(22);
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(const SnackBar(
+                                content:
+                                    Text('Đã đặt nhắc ngủ lúc 22:00 mỗi ngày'),
+                                backgroundColor: Color(0xFF2575FC),
+                              ));
+                            },
+                            icon: const Icon(Icons.nightlight_round),
+                            label: const Text('Đặt nhắc ngủ 22:00'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+// 🚶 Nhắc vận động
+                  Card(
+                    elevation: 6,
+                    color: Colors.white.withOpacity(0.95),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            '🚶 Nhắc vận động',
+                            style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2575FC)),
+                          ),
+                          const SizedBox(height: 10),
+                          const Text(
+                              'Nhắc bạn vận động mỗi 2 giờ trong giờ làm việc.'),
+                          const SizedBox(height: 10),
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              await NotificationService.instance
+                                  .scheduleMoveReminders(120);
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(const SnackBar(
+                                content: Text('Đã đặt nhắc vận động mỗi 2 giờ'),
+                                backgroundColor: Color(0xFF2575FC),
+                              ));
+                            },
+                            icon: const Icon(Icons.directions_walk),
+                            label: const Text('Bật nhắc vận động'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+// 😊 Nhắc ghi tâm trạng
+                  Card(
+                    elevation: 6,
+                    color: Colors.white.withOpacity(0.95),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            '😊 Nhắc ghi tâm trạng',
+                            style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2575FC)),
+                          ),
+                          const SizedBox(height: 10),
+                          const Text(
+                              'Nhắc bạn ghi lại cảm xúc vào buổi sáng và tối.'),
+                          const SizedBox(height: 10),
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              await NotificationService.instance
+                                  .scheduleMoodReminders();
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(const SnackBar(
+                                content: Text(
+                                    'Đã đặt nhắc ghi tâm trạng (9h & 20h)'),
+                                backgroundColor: Color(0xFF2575FC),
+                              ));
+                            },
+                            icon: const Icon(Icons.mood),
+                            label: const Text('Bật nhắc tâm trạng'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 25),
+
+                  // 🧾 Form nhập liệu
+                  Card(
+                    elevation: 6,
+                    shadowColor: Colors.black.withValues(alpha: 0.2),
+                    color: Colors.white.withValues(alpha: 0.95),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                     ),
@@ -223,7 +429,6 @@ class _HealthScreenState extends State<HealthScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 25),
 
                   Align(
@@ -238,7 +443,7 @@ class _HealthScreenState extends State<HealthScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // 🔹 Danh sách dữ liệu
+                  // 📊 Danh sách dữ liệu
                   ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -246,9 +451,9 @@ class _HealthScreenState extends State<HealthScreen> {
                     itemBuilder: (context, index) {
                       final data = _healthData[index];
                       return Card(
-                        color: Colors.white.withOpacity(0.95),
+                        color: Colors.white.withValues(alpha: 0.95),
                         elevation: 4,
-                        shadowColor: Colors.black26,
+                        shadowColor: Colors.black.withValues(alpha: 0.2),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16)),
                         margin: const EdgeInsets.only(bottom: 12),

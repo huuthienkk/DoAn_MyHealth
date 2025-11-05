@@ -76,7 +76,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     tag: 'app_logo',
                     child: CircleAvatar(
                       radius: 48,
-                      backgroundColor: Colors.white.withOpacity(0.15),
+                      backgroundColor: Colors.white.withValues(alpha: 0.15),
                       child: const Icon(
                         Icons.person_add_alt_1_rounded,
                         color: Colors.white,

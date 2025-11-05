@@ -76,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     tag: 'app_logo',
                     child: CircleAvatar(
                       radius: 48,
-                      backgroundColor: Colors.white.withOpacity(0.15),
+                      backgroundColor: Colors.white.withValues(alpha: 0.15),
                       child: const Icon(
                         Icons.health_and_safety_rounded,
                         color: Colors.white,

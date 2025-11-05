@@ -1,21 +1,7 @@
 name: giamsat_suckhoe
-description: "A new Flutter project."
-# The following line prevents the package from being accidentally published to
-# pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+description: "Ứng dụng giám sát sức khỏe & nhận diện món ăn."
+publish_to: 'none'
 
-# The following defines the version and build number for your application.
-# A version number is three numbers separated by dots, like 1.2.43
-# followed by an optional build number separated by a +.
-# Both the version and the builder number may be overridden in flutter
-# build by specifying --build-name and --build-number, respectively.
-# In Android, build-name is used as versionName while build-number used as versionCode.
-# Read more about Android versioning at https://developer.android.com/studio/publish/versioning
-# In iOS, build-name is used as CFBundleShortVersionString while build-number is used as CFBundleVersion.
-# Read more about iOS versioning at
-# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-# In Windows, build-name is used as the major, minor, and patch parts
-# of the product and file versions while build-number is used as the build suffix.
 version: 1.0.0+1
 
 environment:
@@ -26,27 +12,29 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.2
 
-  # Firebase (firebase_core nâng lên ^4.2.0 để tương thích firebase_messaging 16.x)
+  # 🔥 Firebase
   firebase_core: ^4.2.0
   firebase_auth: ^6.1.1
   cloud_firestore: ^6.0.3
   firebase_storage: ^13.0.3
   firebase_messaging: ^16.0.3
 
-  # UI & charts
+  # 📊 UI & Charts
   fl_chart: ^0.70.0
   google_fonts: ^6.2.1
 
-  # Local & notifications
+  # 🔔 Local Storage & Notifications
   shared_preferences: ^2.1.0
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   flutter_local_notifications: ^19.5.0
   timezone: ^0.10.1
 
-  # Utilities
+  # ⚙️ Tiện ích
   provider: ^6.1.2
   intl: ^0.18.1
+  image_picker: ^1.2.0
+  image: ^4.0.17
 
 dev_dependencies:
   flutter_test:
@@ -55,3 +43,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    # 🧩 Thêm mô hình AI đã train
+    - assets/food_model.tflite
+    - assets/labels.txt

@@ -14,7 +14,7 @@ class LoginViewModel {
 
     try {
       await _authController.login(email, password);
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException {
       rethrow; // Để UI hiển thị lỗi
     } catch (e) {
       throw Exception('Đăng nhập thất bại: $e');

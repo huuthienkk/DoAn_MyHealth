@@ -133,7 +133,7 @@ class _MoodScreenState extends State<MoodScreen> {
 
                   // Card nhập tâm trạng
                   Card(
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                     elevation: 6,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
@@ -160,7 +160,8 @@ class _MoodScreenState extends State<MoodScreen> {
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
                                   color: isSelected
-                                      ? gradientColors[1].withOpacity(0.15)
+                                      ? gradientColors[1]
+                                          .withValues(alpha: 0.15)
                                       : Colors.transparent,
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
@@ -295,7 +296,8 @@ class _MoodScreenState extends State<MoodScreen> {
                     Center(
                       child: Text(
                         'Chưa có dữ liệu tâm trạng nào.',
-                        style: TextStyle(color: Colors.white.withOpacity(0.8)),
+                        style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.8)),
                       ),
                     )
                   else
@@ -306,7 +308,7 @@ class _MoodScreenState extends State<MoodScreen> {
                       itemBuilder: (context, index) {
                         final data = _history[index];
                         return Card(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                           elevation: 3,
                           margin: const EdgeInsets.only(bottom: 10),
                           shape: RoundedRectangleBorder(

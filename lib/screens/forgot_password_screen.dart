@@ -82,7 +82,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         const SizedBox(height: 12),
                         CircleAvatar(
                           radius: 45,
-                          backgroundColor: Colors.blue.withOpacity(0.1),
+                          backgroundColor: Colors.blue.withValues(alpha: 0.1),
                           child: const Icon(
                             Icons.lock_reset_rounded,
                             size: 50,

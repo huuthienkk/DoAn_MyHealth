@@ -12,16 +12,16 @@ class HealthData {
   });
 
   Map<String, dynamic> toMap() => {
-    'date': date.toIso8601String(),
-    'steps': steps,
-    'weight': weight,
-    'sleepHours': sleepHours,
-  };
+        'date': date.toIso8601String(),
+        'steps': steps,
+        'weight': weight,
+        'sleepHours': sleepHours,
+      };
 
   factory HealthData.fromMap(Map<String, dynamic> map) => HealthData(
-    date: DateTime.parse(map['date']),
-    steps: map['steps'],
-    weight: map['weight'],
-    sleepHours: map['sleepHours'],
-  );
+        date: DateTime.parse(map['date']),
+        steps: map['steps'],
+        weight: map['weight'],
+        sleepHours: map['sleepHours'],
+      );
 }
