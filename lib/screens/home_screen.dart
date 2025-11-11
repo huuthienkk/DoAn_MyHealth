@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../controllers/auth_controller.dart';
-import '../../models/health_model.dart';
-import '../widgets/charts/health_chart.dart';
-import '../widgets/charts/mood_chart.dart';
+import '../controllers/health_controller.dart';
+import '../models/health_model.dart';
+import '../widgets/common/bottom_navigation_bar.dart';
 import 'health_screen.dart';
 import 'mood_screen.dart';
-import 'food_recognizer_screen.dart'; // ✅ thêm dòng này
+import 'food_recognizer_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,53 +17,54 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final AuthController _authController = AuthController();
-  String _username = 'Người dùng';
-  final String _currentMood = 'Bình thường';
-  int _steps = 3500;
+  final HealthController _healthController = HealthController();
 
-  final List<String> _healthTips = [
-    '💧 Uống đủ 2 lít nước mỗi ngày',
-    '🏃‍♀️ Tập thể dục ít nhất 30 phút',
-    '🕒 Ngủ đủ 7–8 tiếng',
-    '🥗 Ăn nhiều rau xanh và trái cây',
+  String _username = 'Người dùng';
+  final List<HealthData> _healthData = [];
+
+  int _selectedBottomIndex = 0;
+
+  // Water intake time slots
+  final List<Map<String, dynamic>> _waterIntakeSlots = [
+    {'time': '6am - 8am', 'completed': true},
+    {'time': '9am - 11am', 'completed': true},
+    {'time': '11am - 2pm', 'completed': false},
+    {'time': '2pm - 4pm', 'completed': false},
   ];
 
-  int _selectedTipIndex = 0;
+  // Activity progress data
+  final List<int> _weeklySteps = [3000, 4500, 6000, 3500, 7000, 5500, 4000];
 
-  // 🔹 Dữ liệu demo cho biểu đồ
-  final List<HealthData> _healthData = List.generate(
-    7,
-    (index) => HealthData(
-      date: DateTime.now().subtract(Duration(days: 6 - index)),
-      steps: 3000 + index * 500,
-      weight: 60 + index * 0.2,
-      sleepHours: 7 + (index % 2 == 0 ? 0.5 : -0.3),
-    ),
-  );
+  // Workout progress data
+  final List<int> _weeklyWorkout = [30, 45, 60, 35, 70, 55, 40];
 
-  final Map<String, int> _moodData = {
-    'Vui': 5,
-    'Buồn': 2,
-    'Căng thẳng': 1,
-    'Thư giãn': 3,
-  };
+  // Latest activities
+  final List<Map<String, dynamic>> _latestActivities = [
+    {'action': 'Drinking 300ml Water', 'time': 'About 3 minutes ago'},
+    {'action': 'Eat Snack (Fitbar)', 'time': 'About 10 minutes ago'},
+  ];
 
   @override
   void initState() {
     super.initState();
-    _loadUserData();
-    _startTipRotation();
+    _waitAndLoadData();
   }
 
-  void _startTipRotation() {
-    Future.delayed(const Duration(seconds: 5), () {
-      if (mounted) {
-        setState(() {
-          _selectedTipIndex = (_selectedTipIndex + 1) % _healthTips.length;
-        });
-        _startTipRotation();
-      }
-    });
+  Future<void> _waitAndLoadData() async {
+    while (FirebaseAuth.instance.currentUser == null) {
+      await Future.delayed(const Duration(milliseconds: 200));
+    }
+    await _loadAllData();
+  }
+
+  Future<void> _loadAllData() async {
+    try {
+      await _loadUserData();
+      await _loadHealthData();
+    } catch (e) {
+      debugPrint('❌ Lỗi load data: $e');
+      if (_healthData.isEmpty) _setDemoData();
+    }
   }
 
   Future<void> _loadUserData() async {
@@ -73,28 +75,65 @@ class _HomeScreenState extends State<HomeScreen> {
         _username = data?['username'] ?? 'Người dùng';
       });
     } catch (e) {
-      _showError('Không tải được dữ liệu: $e');
+      debugPrint('❌ Lỗi load user: $e');
     }
   }
 
-  Future<void> _refreshData() async {
-    await Future.delayed(const Duration(seconds: 1));
-    setState(() {
-      _steps += 150;
+  Future<void> _loadHealthData() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final data = await _healthController.getHealthData(user.uid);
+      if (!mounted) return;
+
+      if (data.isNotEmpty) {
+        data.sort((a, b) => b.date.compareTo(a.date));
+        final last7 = _getLast7DaysData(data);
+        setState(() {
+          _healthData.clear();
+          _healthData.addAll(last7);
+        });
+      } else {
+        _setDemoData();
+      }
+    } catch (e) {
+      debugPrint('❌ Lỗi load health data: $e');
+    }
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  List<HealthData> _getLast7DaysData(List<HealthData> allData) {
+    final today = DateTime.now();
+    return List.generate(7, (i) {
+      final day = DateTime(today.year, today.month, today.day)
+          .subtract(Duration(days: 6 - i));
+      final item = allData.firstWhere((d) => _isSameDay(d.date, day),
+          orElse: () =>
+              HealthData(date: day, steps: 0, weight: 0, sleepHours: 0));
+      return item;
     });
   }
 
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.redAccent,
-        behavior: SnackBarBehavior.floating,
+  void _setDemoData() {
+    final today = DateTime.now();
+    _healthData.clear();
+    _healthData.addAll(List.generate(
+      7,
+      (index) => HealthData(
+        date: today.subtract(Duration(days: 6 - index)),
+        steps: _weeklySteps[index],
+        weight: 65.0,
+        sleepHours: 7.5,
       ),
-    );
+    ));
   }
 
-  Future<void> _logout() async {
+  Future<void> _refreshData() async => _loadAllData();
+
+  void _logout() async {
     try {
       await _authController.logout();
       if (mounted) Navigator.pushReplacementNamed(context, '/');
@@ -103,261 +142,456 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Widget _buildStatCard(
-      String title, String value, IconData icon, Color color) {
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(message),
+      backgroundColor: Colors.redAccent,
+      behavior: SnackBarBehavior.floating,
+    ));
+  }
+
+  void _onBottomNavTap(int index) {
+    setState(() {
+      _selectedBottomIndex = index;
+    });
+
+    switch (index) {
+      case 0: // Trang chủ (current screen)
+        break;
+      case 1: // Sức khỏe
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HealthScreen()),
+        );
+        break;
+      case 2: // Tâm trạng
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MoodScreen()),
+        );
+        break;
+      case 3: // AI Calo
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const FoodRecognizerScreen()),
+        );
+        break;
+    }
+  }
+
+  Widget _buildWaterIntakeCard() {
     return Card(
-      elevation: 6,
-      shadowColor: color.withValues(alpha: 0.2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
-            colors: [color.withValues(alpha: 0.1), Colors.white],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: Row(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              radius: 30,
-              backgroundColor: color.withValues(alpha: 0.15),
-              child: Icon(icon, size: 30, color: color),
+            const Text(
+              'Water Intake',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(width: 20),
+            const SizedBox(height: 12),
+            const Text(
+              'Real time updates',
+              style: TextStyle(color: Colors.grey, fontSize: 14),
+            ),
+            const SizedBox(height: 12),
             Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: const TextStyle(
-                        color: Colors.black54,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500)),
-                const SizedBox(height: 6),
-                Text(value,
-                    style: TextStyle(
-                        color: color,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold)),
-              ],
-            )
+              children: _waterIntakeSlots.map((slot) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      Icon(
+                        slot['completed']
+                            ? Icons.check_circle
+                            : Icons.radio_button_unchecked,
+                        color: slot['completed'] ? Colors.green : Colors.grey,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        slot['time'],
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: slot['completed'] ? Colors.black : Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildNavigationButton(
-      String title, IconData icon, VoidCallback onTap) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          height: 120,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+  Widget _buildSleepCard() {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Sleep',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black26.withValues(alpha: 0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+            const SizedBox(height: 12),
+            const Text(
+              'Calories',
+              style: TextStyle(color: Colors.grey, fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              '280°C',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
               ),
-            ],
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: Colors.white, size: 38),
-              const SizedBox(height: 10),
-              Text(
-                title,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  // ==========================================================
-  //                    BUILD UI CHÍNH
-  // ==========================================================
+  Widget _buildActivityTrackerCard() {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Activity Tracker',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Today Target',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildTargetItem('Water Intake', Icons.water_drop, Colors.blue),
+                const SizedBox(width: 16),
+                _buildTargetItem(
+                    'Foot Steps', Icons.directions_walk, Colors.orange),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTargetItem(String title, IconData icon, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 14,
+                color: color,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActivityProgressCard() {
+    final List<String> days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Activity Progress',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: days.map((day) {
+                final index = days.indexOf(day);
+                final isToday = index == DateTime.now().weekday % 7;
+                return Column(
+                  children: [
+                    Text(
+                      day,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isToday ? Colors.blue : Colors.grey,
+                        fontWeight:
+                            isToday ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      width: 6,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: Colors.blue
+                            .withValues(alpha: _weeklySteps[index] / 10000),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWorkoutProgressCard() {
+    final List<String> days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Workout Progress',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: days.map((day) {
+                final index = days.indexOf(day);
+                final isToday = index == (DateTime.now().weekday - 1) % 6;
+                return Column(
+                  children: [
+                    Text(
+                      day,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isToday ? Colors.orange : Colors.grey,
+                        fontWeight:
+                            isToday ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      width: 6,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: Colors.orange
+                            .withValues(alpha: _weeklyWorkout[index] / 100),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLatestActivityCard() {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Latest Activity',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                GestureDetector(
+                  onTap: () {},
+                  child: const Text(
+                    'See more',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.blue,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Column(
+              children: _latestActivities.map((activity) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          activity['action'].contains('Water')
+                              ? Icons.water_drop
+                              : Icons.restaurant,
+                          color: Colors.blue,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              activity['action'],
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            Text(
+                              activity['time'],
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBodyBehindAppBar: true,
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: Text('Xin chào, $_username',
             style: const TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.transparent,
+        backgroundColor: Colors.white,
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_none),
-            onPressed: () {},
-          ),
-          IconButton(onPressed: _logout, icon: const Icon(Icons.logout)),
+              icon: const Icon(Icons.notifications_none, color: Colors.black),
+              onPressed: () {}),
+          IconButton(
+              icon: const Icon(Icons.logout, color: Colors.black),
+              onPressed: _logout),
         ],
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: SafeArea(
-          child: RefreshIndicator(
-            onRefresh: _refreshData,
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 🔹 Tip of the day
-                  Card(
-                    elevation: 6,
-                    shadowColor: Colors.white.withValues(alpha: 0.2),
-                    color: Colors.white.withValues(alpha: 0.9),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.tips_and_updates_rounded,
-                              color: Color(0xFF2575FC), size: 32),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 500),
-                              child: Text(
-                                _healthTips[_selectedTipIndex],
-                                key: ValueKey(_selectedTipIndex),
-                                style: const TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.black87,
-                                    fontWeight: FontWeight.w500),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+      body: Column(
+        children: [
+          // Nội dung chính có thể cuộn
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _refreshData,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    // First row: Water Intake and Sleep
+                    Row(
+                      children: [
+                        Expanded(child: _buildWaterIntakeCard()),
+                        const SizedBox(width: 16),
+                        Expanded(child: _buildSleepCard()),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 25),
+                    const SizedBox(height: 16),
 
-                  // 🔹 Daily Progress
-                  Text('Tiến trình hôm nay',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.white, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 10),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: LinearProgressIndicator(
-                      value: _steps / 10000,
-                      minHeight: 10,
-                      backgroundColor: Colors.white24,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        _steps >= 10000 ? Colors.greenAccent : Colors.orange,
-                      ),
+                    // Activity Tracker
+                    _buildActivityTrackerCard(),
+                    const SizedBox(height: 16),
+
+                    // Second row: Activity Progress and Workout Progress
+                    Row(
+                      children: [
+                        Expanded(child: _buildActivityProgressCard()),
+                        const SizedBox(width: 16),
+                        Expanded(child: _buildWorkoutProgressCard()),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '${(_steps / 10000 * 100).toInt()}% hoàn thành mục tiêu',
-                    style: const TextStyle(color: Colors.white70),
-                  ),
-                  const SizedBox(height: 25),
+                    const SizedBox(height: 16),
 
-                  // 🔹 Stats Cards
-                  _buildStatCard('Số bước hôm nay', '$_steps / 10.000',
-                      Icons.directions_walk_rounded, Colors.orange),
-                  const SizedBox(height: 16),
-                  _buildStatCard(
-                      'Tâm trạng', _currentMood, Icons.mood, Colors.purple),
-                  const SizedBox(height: 25),
+                    // Latest Activity
+                    _buildLatestActivityCard(),
+                    const SizedBox(height: 16),
 
-                  // 🔹 Biểu đồ thống kê
-                  HealthChart(
-                    data: _healthData,
-                    title: 'Số bước đi 7 ngày gần đây',
-                    unit: 'bước',
-                    lineColor: Colors.orange,
-                  ),
-                  const SizedBox(height: 20),
-                  MoodChart(distribution: _moodData),
-                  const SizedBox(height: 35),
-
-                  // 🔹 Quick Actions
-                  Text('Truy cập nhanh',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.white, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      _buildNavigationButton('Sức khỏe', Icons.favorite, () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const HealthScreen()),
-                        );
-                      }),
-                      const SizedBox(width: 16),
-                      _buildNavigationButton('Tâm trạng', Icons.mood, () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const MoodScreen()),
-                        );
-                      }),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      _buildNavigationButton('AI Calo', Icons.fastfood_rounded,
-                          () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) =>
-                                  const FoodRecognizerScreen()),
-                        );
-                      }),
-                      const SizedBox(width: 16),
-                      _buildNavigationButton('Lịch sử', Icons.history_rounded,
-                          () {
-                        // sau này có thể làm thêm trang thống kê
-                      }),
-                    ],
-                  ),
-
-                  const SizedBox(height: 40),
-                ],
+                    // Thêm khoảng trống phía dưới để không bị bottom navigation che
+                    const SizedBox(height: 80),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
+
+          // Bottom Navigation cố định phía dưới
+          Container(
+            width: double.infinity,
+            color: Colors.grey[50],
+            child: CustomBottomNavigationBar(
+              currentIndex: _selectedBottomIndex,
+              onTap: _onBottomNavTap,
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF2575FC),
-        child: const Icon(Icons.add),
+        onPressed: _refreshData,
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.refresh),
       ),
     );
   }

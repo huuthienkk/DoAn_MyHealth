@@ -1,6 +1,6 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/material.dart';
 
 class FoodAIService {
   static final FoodAIService _instance = FoodAIService._internal();
@@ -37,15 +37,15 @@ class FoodAIService {
             .split('\n')
             .where((label) => label.isNotEmpty)
             .toList();
-        print('✅ Loaded ${_labels.length} labels from file');
+        debugPrint('✅ Loaded ${_labels.length} labels from file');
       } catch (e) {
-        print('⚠️ Using default labels: ${_labels.length} items');
+        debugPrint('⚠️ Using default labels: ${_labels.length} items');
       }
 
       _isModelLoaded = true;
-      print('✅ Food AI Service initialized successfully');
+      debugPrint('✅ Food AI Service initialized successfully');
     } catch (e) {
-      print('❌ Failed to initialize food AI service: $e');
+      debugPrint('❌ Failed to initialize food AI service: $e');
       _isModelLoaded = false;
     }
   }
@@ -69,7 +69,7 @@ class FoodAIService {
         "index": randomIndex,
       };
     } catch (e) {
-      print('❌ Prediction error: $e');
+      debugPrint('❌ Prediction error: $e');
       return {
         "label": "Lỗi nhận diện",
         "confidence": 0.0,
@@ -109,7 +109,7 @@ class FoodAIService {
 
       return results;
     } catch (e) {
-      print('❌ Multiple prediction error: $e');
+      debugPrint('❌ Multiple prediction error: $e');
       return [];
     }
   }
@@ -128,7 +128,7 @@ class FoodAIService {
 
   Future<void> closeModel() async {
     _isModelLoaded = false;
-    print('✅ Food AI Service closed');
+    debugPrint('✅ Food AI Service closed');
   }
 
   List<String> get availableLabels => _labels;
