@@ -1,8 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.giamsat_suckhoe">
 
-    <!-- 🟢 Cho phép hiển thị thông báo (Android 13+) -->
+    <!-- 🟢 QUYỀN THÔNG BÁO -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    
+    <!-- 🟢 QUYỀN BÁO THỨC CHÍNH XÁC - THÊM DÒNG NÀY -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    
+    <!-- 🟢 HOẶC cho Android 13+ (API 33+) -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
     <application
         android:label="giamsat_suckhoe"

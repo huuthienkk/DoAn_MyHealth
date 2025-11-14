@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../../utils/constants.dart';
+import '../common/empty_state.dart';
 
 class MoodChart extends StatelessWidget {
   final Map<String, int> distribution;
@@ -8,19 +10,24 @@ class MoodChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (distribution.isEmpty) {
-      return const SizedBox(
+      return SizedBox(
         height: 200,
-        child: Center(child: Text('Không có dữ liệu')),
+        child: EmptyState(
+          icon: Icons.pie_chart,
+          title: 'Không có dữ liệu',
+          message: 'Hãy ghi lại tâm trạng để xem biểu đồ',
+          iconColor: AppColors.textTertiary,
+        ),
       );
     }
 
     final total = distribution.values.fold<int>(0, (a, b) => a + b);
     final colors = [
-      Colors.green,
-      Colors.orange,
-      Colors.red,
-      Colors.blueAccent,
-      Colors.purple
+      AppColors.happy,
+      AppColors.neutral,
+      AppColors.sad,
+      AppColors.primary,
+      AppColors.secondary,
     ];
 
     int idx = 0;
@@ -51,56 +58,54 @@ class MoodChart extends StatelessWidget {
       return section;
     }).toList();
 
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            const Text(
-              'Phân bố tâm trạng',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 200,
-              child: PieChart(
-                PieChartData(
-                  sections: sections,
-                  centerSpaceRadius: 30,
-                  sectionsSpace: 2,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            // Tạo chú thích (legend)
-            Wrap(
-              spacing: 10,
-              runSpacing: 4,
-              children: distribution.keys
-                  .toList()
-                  .asMap()
-                  .entries
-                  .map((entry) => Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 12,
-                            height: 12,
-                            color: colors[entry.key % colors.length],
-                          ),
-                          const SizedBox(width: 4),
-                          Text(entry.value.toString() == '1'
-                              ? '${entry.key} (1 lần)'
-                              : '${entry.key} (${entry.value} lần)'),
-                        ],
-                      ))
-                  .toList(),
-            )
-          ],
+    return Column(
+      children: [
+        Text(
+          'Phân bố tâm trạng',
+          style: AppTextStyles.h4,
         ),
-      ),
+        const SizedBox(height: AppSpacing.md),
+        SizedBox(
+          height: 200,
+          child: PieChart(
+            PieChartData(
+              sections: sections,
+              centerSpaceRadius: 30,
+              sectionsSpace: 2,
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        // Tạo chú thích (legend)
+        Wrap(
+          spacing: AppSpacing.md,
+          runSpacing: AppSpacing.xs,
+          children: distribution.entries.toList().asMap().entries.map((entry) {
+            final moodEntry = entry.value;
+            final count = moodEntry.value;
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: colors[entry.key % colors.length],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Text(
+                  count == 1
+                      ? '${moodEntry.key} (1 lần)'
+                      : '${moodEntry.key} ($count lần)',
+                  style: AppTextStyles.caption,
+                ),
+              ],
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 }

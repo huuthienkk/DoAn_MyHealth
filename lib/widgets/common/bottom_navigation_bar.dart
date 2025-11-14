@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/constants.dart';
 
 class CustomBottomNavigationBar extends StatefulWidget {
   final int currentIndex;
@@ -26,14 +27,17 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         boxShadow: [
           BoxShadow(
-            color: Colors.black12.withValues(alpha: 0.1),
-            blurRadius: 8,
+            color: AppColors.textPrimary.withValues(alpha: 0.05),
+            blurRadius: 10,
             offset: const Offset(0, 2),
           ),
         ],
@@ -53,29 +57,33 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
     return Expanded(
       child: GestureDetector(
         onTap: () => widget.onTap(index),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
           decoration: BoxDecoration(
             color: isSelected
-                ? Colors.blue.withValues(alpha: 0.1)
+                ? AppColors.primary.withValues(alpha: 0.1)
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppRadius.md),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 item.icon,
-                color: isSelected ? Colors.blue : Colors.grey,
+                color: isSelected ? AppColors.primary : AppColors.textTertiary,
                 size: 24,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: AppSpacing.xs),
               Text(
                 item.title,
-                style: TextStyle(
-                  color: isSelected ? Colors.blue : Colors.grey,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  fontSize: 12,
+                style: AppTextStyles.caption.copyWith(
+                  color: isSelected
+                      ? AppColors.primary
+                      : AppColors.textTertiary,
+                  fontWeight:
+                      isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
             ],

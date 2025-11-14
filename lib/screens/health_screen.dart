@@ -6,6 +6,13 @@ import 'package:intl/intl.dart';
 import '../widgets/charts/health_chart.dart';
 import '../services/notification_service.dart';
 import '../widgets/common/bottom_navigation_bar.dart';
+import '../widgets/common/app_card.dart';
+import '../widgets/common/app_button.dart';
+import '../widgets/common/app_text_field.dart';
+import '../widgets/common/app_app_bar.dart';
+import '../widgets/common/section_header.dart';
+import '../widgets/common/empty_state.dart';
+import '../utils/constants.dart';
 import 'home_screen.dart';
 import 'mood_screen.dart';
 import 'food_recognizer_screen.dart';
@@ -22,11 +29,19 @@ class _HealthScreenState extends State<HealthScreen> {
   final _stepsCtrl = TextEditingController();
   final _weightCtrl = TextEditingController();
   final _sleepCtrl = TextEditingController();
+  final _heightCtrl = TextEditingController();
+  final _systolicBPCtrl = TextEditingController();
+  final _diastolicBPCtrl = TextEditingController();
+  final _heartRateCtrl = TextEditingController();
+  final _waterIntakeCtrl = TextEditingController();
+  final _caloriesInCtrl = TextEditingController();
+  final _caloriesOutCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _loading = false;
   List<HealthData> _healthData = [];
+  bool _showAdvancedFields = false;
 
-  // 🟢 Nhắc nhở uống nước
+  // Nhắc nhở uống nước
   int _selectedInterval = 0;
   final List<int> _intervalOptions = [0, 30, 45, 60];
   int _selectedBottomIndex = 1; // Index 1 cho Sức khỏe
@@ -53,7 +68,17 @@ class _HealthScreenState extends State<HealthScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.success,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -70,26 +95,52 @@ class _HealthScreenState extends State<HealthScreen> {
         steps: int.tryParse(_stepsCtrl.text) ?? 0,
         weight: double.tryParse(_weightCtrl.text) ?? 0,
         sleepHours: double.tryParse(_sleepCtrl.text) ?? 0,
+        height: _heightCtrl.text.isNotEmpty
+            ? double.tryParse(_heightCtrl.text)
+            : null,
+        systolicBP: _systolicBPCtrl.text.isNotEmpty
+            ? int.tryParse(_systolicBPCtrl.text)
+            : null,
+        diastolicBP: _diastolicBPCtrl.text.isNotEmpty
+            ? int.tryParse(_diastolicBPCtrl.text)
+            : null,
+        heartRate: _heartRateCtrl.text.isNotEmpty
+            ? int.tryParse(_heartRateCtrl.text)
+            : null,
+        waterIntake: _waterIntakeCtrl.text.isNotEmpty
+            ? double.tryParse(_waterIntakeCtrl.text)
+            : null,
+        caloriesIn: _caloriesInCtrl.text.isNotEmpty
+            ? double.tryParse(_caloriesInCtrl.text)
+            : null,
+        caloriesOut: _caloriesOutCtrl.text.isNotEmpty
+            ? double.tryParse(_caloriesOutCtrl.text)
+            : null,
       );
       await _controller.addHealthData(uid, data);
-      _stepsCtrl.clear();
-      _weightCtrl.clear();
-      _sleepCtrl.clear();
+      _clearAllFields();
       await _loadData();
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đã lưu dữ liệu thành công!'),
-          backgroundColor: Color(0xFF2575FC),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      _showSuccess('Đã lưu dữ liệu thành công!');
     } catch (e) {
       _showError('Không thể lưu dữ liệu: $e');
     } finally {
       setState(() => _loading = false);
     }
+  }
+
+  void _clearAllFields() {
+    _stepsCtrl.clear();
+    _weightCtrl.clear();
+    _sleepCtrl.clear();
+    _heightCtrl.clear();
+    _systolicBPCtrl.clear();
+    _diastolicBPCtrl.clear();
+    _heartRateCtrl.clear();
+    _waterIntakeCtrl.clear();
+    _caloriesInCtrl.clear();
+    _caloriesOutCtrl.clear();
   }
 
   String? _validateNumber(String? value, String fieldName) {
@@ -103,7 +154,6 @@ class _HealthScreenState extends State<HealthScreen> {
       _selectedBottomIndex = index;
     });
 
-    // Xử lý navigation dựa trên index
     switch (index) {
       case 0: // Trang chủ
         Navigator.pushReplacement(
@@ -112,7 +162,6 @@ class _HealthScreenState extends State<HealthScreen> {
         );
         break;
       case 1: // Sức khỏe (current screen)
-        // Đã ở trang sức khỏe, không cần navigation
         break;
       case 2: // Tâm trạng
         Navigator.pushReplacement(
@@ -129,71 +178,52 @@ class _HealthScreenState extends State<HealthScreen> {
     }
   }
 
-  Widget _buildNotificationCard(String title, String description, IconData icon,
-      Color color, VoidCallback onPressed) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: color.withAlpha(2),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, color: color, size: 24),
+  Widget _buildNotificationCard(
+    String title,
+    String description,
+    IconData icon,
+    Color color,
+    VoidCallback onPressed,
+  ) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: color,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              description,
-              style: const TextStyle(
-                color: Colors.grey,
-                fontSize: 14,
+                child: Icon(icon, color: color, size: 24),
               ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: onPressed,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: color,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: const Text(
-                  'Kích hoạt',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
-                  ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTextStyles.h4.copyWith(color: color),
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            description,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          AppButton(
+            text: 'Kích hoạt',
+            onPressed: onPressed,
+            backgroundColor: color,
+            height: 44,
+          ),
+        ],
       ),
     );
   }
@@ -201,317 +231,350 @@ class _HealthScreenState extends State<HealthScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text(
-          'Giám sát sức khỏe',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
+      backgroundColor: AppColors.background,
+      appBar: AppAppBar(
+        title: 'Giám sát sức khỏe',
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
-            );
-          },
-        ),
+        onBackPressed: () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+          );
+        },
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.black),
+          AppIconButton(
+            icon: Icons.refresh,
             onPressed: _loadData,
+            tooltip: 'Làm mới',
           ),
+          const SizedBox(width: AppSpacing.sm),
         ],
       ),
       body: Column(
         children: [
-          // Nội dung chính có thể cuộn
           Expanded(
             child: RefreshIndicator(
               onRefresh: _loadData,
-              color: const Color(0xFF2575FC),
+              color: AppColors.primary,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   children: [
                     // Biểu đồ sức khỏe
                     if (_healthData.isNotEmpty)
-                      Card(
-                        elevation: 4,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: HealthChart(
-                            data: _healthData,
-                            title: 'Số bước chân 7 ngày qua',
-                            lineColor: const Color(0xFF2575FC),
-                          ),
+                      AppCard(
+                        child: HealthChart(
+                          data: _healthData,
+                          title: 'Số bước chân 7 ngày qua',
+                          lineColor: AppColors.primary,
                         ),
                       ),
-                    const SizedBox(height: 16),
+                    if (_healthData.isNotEmpty)
+                      const SizedBox(height: AppSpacing.md),
 
                     // Form nhập liệu
-                    Card(
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Thêm dữ liệu mới',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              _buildInputField(
-                                controller: _stepsCtrl,
-                                label: 'Số bước chân',
-                                icon: Icons.directions_walk,
-                                color: Colors.orange,
-                              ),
-                              const SizedBox(height: 12),
-                              _buildInputField(
-                                controller: _weightCtrl,
-                                label: 'Cân nặng (kg)',
-                                icon: Icons.monitor_weight,
-                                color: Colors.purple,
-                              ),
-                              const SizedBox(height: 12),
-                              _buildInputField(
-                                controller: _sleepCtrl,
-                                label: 'Giờ ngủ',
-                                icon: Icons.bedtime,
-                                color: Colors.blue,
-                              ),
-                              const SizedBox(height: 16),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed: _loading ? null : _saveData,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF2575FC),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 16),
-                                    elevation: 3,
-                                  ),
-                                  child: _loading
-                                      ? const SizedBox(
-                                          height: 20,
-                                          width: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            valueColor:
-                                                AlwaysStoppedAnimation<Color>(
-                                              Colors.white,
-                                            ),
-                                          ),
-                                        )
-                                      : const Text(
-                                          'LƯU DỮ LIỆU',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Cài đặt nhắc nhở
-                    Card(
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
+                    AppCard(
+                      child: Form(
+                        key: _formKey,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              '💧 Nhắc uống nước',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            Text('Thêm dữ liệu mới', style: AppTextStyles.h4),
+                            const SizedBox(height: AppSpacing.md),
+                            AppTextField(
+                              controller: _stepsCtrl,
+                              labelText: 'Số bước chân',
+                              prefixIcon: Icons.directions_walk,
+                              iconColor: AppColors.steps,
+                              keyboardType: TextInputType.number,
+                              validator: (value) =>
+                                  _validateNumber(value, 'Số bước chân'),
                             ),
-                            const SizedBox(height: 12),
-                            const Text(
-                              'Chọn tần suất nhắc uống nước:',
-                              style: TextStyle(color: Colors.grey),
+                            const SizedBox(height: AppSpacing.md),
+                            AppTextField(
+                              controller: _weightCtrl,
+                              labelText: 'Cân nặng (kg)',
+                              prefixIcon: Icons.monitor_weight,
+                              iconColor: AppColors.weight,
+                              keyboardType: TextInputType.number,
+                              validator: (value) =>
+                                  _validateNumber(value, 'Cân nặng'),
                             ),
-                            const SizedBox(height: 12),
-                            DropdownButtonFormField<int>(
-                              initialValue: _selectedInterval,
-                              decoration: InputDecoration(
-                                filled: true,
-                                fillColor: Colors.grey[50],
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide.none,
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
-                                ),
-                              ),
-                              items: _intervalOptions
-                                  .map(
-                                    (val) => DropdownMenuItem<int>(
-                                      value: val,
-                                      child: Text(
-                                        val == 0
-                                            ? 'Tắt nhắc nhở'
-                                            : 'Mỗi $val phút',
-                                        style: const TextStyle(fontSize: 14),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (val) async {
-                                setState(() => _selectedInterval = val ?? 0);
-                                if (val != null && val > 0) {
-                                  await NotificationService.instance
-                                      .scheduleWaterReminders(val);
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Đã bật nhắc uống nước mỗi $val phút',
-                                          style: const TextStyle(
-                                              color: Colors.white),
-                                        ),
-                                        backgroundColor:
-                                            const Color(0xFF2575FC),
-                                      ),
-                                    );
-                                  }
-                                } else {
-                                  await NotificationService.instance
-                                      .showInstantNotification(
-                                    '💧 Nhắc uống nước',
-                                    'Đã tắt nhắc nhở.',
-                                  );
-                                }
+                            const SizedBox(height: AppSpacing.md),
+                            AppTextField(
+                              controller: _sleepCtrl,
+                              labelText: 'Giờ ngủ',
+                              prefixIcon: Icons.bedtime,
+                              iconColor: AppColors.sleep,
+                              keyboardType: TextInputType.number,
+                              validator: (value) =>
+                                  _validateNumber(value, 'Giờ ngủ'),
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+
+                            // Nút hiển thị thêm trường
+                            InkWell(
+                              onTap: () {
+                                setState(() =>
+                                    _showAdvancedFields = !_showAdvancedFields);
                               },
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    _showAdvancedFields
+                                        ? 'Ẩn các trường nâng cao'
+                                        : 'Hiển thị thêm trường',
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSpacing.xs),
+                                  Icon(
+                                    _showAdvancedFields
+                                        ? Icons.keyboard_arrow_up
+                                        : Icons.keyboard_arrow_down,
+                                    color: AppColors.primary,
+                                    size: 20,
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            // Các trường nâng cao
+                            if (_showAdvancedFields) ...[
+                              const SizedBox(height: AppSpacing.md),
+                              AppTextField(
+                                controller: _heightCtrl,
+                                labelText: 'Chiều cao (cm)',
+                                prefixIcon: Icons.height,
+                                iconColor: AppColors.info,
+                                keyboardType: TextInputType.number,
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: AppTextField(
+                                      controller: _systolicBPCtrl,
+                                      labelText: 'Huyết áp tâm thu',
+                                      prefixIcon: Icons.favorite,
+                                      iconColor: AppColors.error,
+                                      keyboardType: TextInputType.number,
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  Expanded(
+                                    child: AppTextField(
+                                      controller: _diastolicBPCtrl,
+                                      labelText: 'Huyết áp tâm trương',
+                                      prefixIcon: Icons.favorite_border,
+                                      iconColor: AppColors.error,
+                                      keyboardType: TextInputType.number,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              AppTextField(
+                                controller: _heartRateCtrl,
+                                labelText: 'Nhịp tim (bpm)',
+                                prefixIcon: Icons.favorite,
+                                iconColor: AppColors.error,
+                                keyboardType: TextInputType.number,
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              AppTextField(
+                                controller: _waterIntakeCtrl,
+                                labelText: 'Lượng nước (ml)',
+                                prefixIcon: Icons.water_drop,
+                                iconColor: AppColors.water,
+                                keyboardType: TextInputType.number,
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: AppTextField(
+                                      controller: _caloriesInCtrl,
+                                      labelText: 'Calo nạp vào',
+                                      prefixIcon: Icons.restaurant,
+                                      iconColor: AppColors.warning,
+                                      keyboardType: TextInputType.number,
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  Expanded(
+                                    child: AppTextField(
+                                      controller: _caloriesOutCtrl,
+                                      labelText: 'Calo tiêu thụ',
+                                      prefixIcon: Icons.local_fire_department,
+                                      iconColor: AppColors.warning,
+                                      keyboardType: TextInputType.number,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            const SizedBox(height: AppSpacing.md),
+                            AppButton(
+                              text: 'LƯU DỮ LIỆU',
+                              onPressed: _loading ? null : _saveData,
+                              isLoading: _loading,
                             ),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.md),
+
+                    // Cài đặt nhắc nhở uống nước
+                    AppCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: AppColors.water.withValues(alpha: 0.1),
+                                  borderRadius:
+                                      BorderRadius.circular(AppRadius.md),
+                                ),
+                                child: const Icon(
+                                  Icons.water_drop,
+                                  color: AppColors.water,
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                child: Text(
+                                  '💧 Nhắc uống nước',
+                                  style: AppTextStyles.h4,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          Text(
+                            'Chọn tần suất nhắc uống nước:',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          DropdownButtonFormField<int>(
+                            initialValue: _selectedInterval,
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: AppColors.background,
+                              border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.md),
+                                borderSide: BorderSide.none,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.md,
+                                vertical: AppSpacing.md,
+                              ),
+                            ),
+                            items: _intervalOptions
+                                .map(
+                                  (val) => DropdownMenuItem<int>(
+                                    value: val,
+                                    child: Text(
+                                      val == 0
+                                          ? 'Tắt nhắc nhở'
+                                          : 'Mỗi $val phút',
+                                      style: AppTextStyles.bodyMedium,
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (val) async {
+                              setState(() => _selectedInterval = val ?? 0);
+                              if (val != null && val > 0) {
+                                await NotificationService.instance
+                                    .scheduleWaterReminders(val);
+                                if (mounted) {
+                                  _showSuccess(
+                                      'Đã bật nhắc uống nước mỗi $val phút');
+                                }
+                              } else {
+                                await NotificationService.instance
+                                    .showInstantNotification(
+                                  '💧 Nhắc uống nước',
+                                  'Đã tắt nhắc nhở.',
+                                );
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
 
                     // Các tính năng nhắc nhở khác
                     _buildNotificationCard(
                       '😴 Nhắc ngủ đúng giờ',
                       'Nhắc bạn đi ngủ lúc 22:00 mỗi ngày',
                       Icons.nightlight_round,
-                      Colors.purple,
+                      AppColors.weight,
                       () async {
                         await NotificationService.instance
                             .scheduleSleepReminder(22);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content:
-                                  Text('Đã đặt nhắc ngủ lúc 22:00 mỗi ngày'),
-                              backgroundColor: Color(0xFF2575FC),
-                            ),
-                          );
+                        if (mounted) {
+                          _showSuccess('Đã đặt nhắc ngủ lúc 22:00 mỗi ngày');
                         }
                       },
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppSpacing.sm),
 
                     _buildNotificationCard(
                       '🚶 Nhắc vận động',
                       'Nhắc bạn vận động mỗi 2 giờ trong giờ làm việc',
                       Icons.directions_walk,
-                      Colors.orange,
+                      AppColors.steps,
                       () async {
                         await NotificationService.instance
                             .scheduleMoveReminders(120);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Đã đặt nhắc vận động mỗi 2 giờ'),
-                              backgroundColor: Color(0xFF2575FC),
-                            ),
-                          );
+                        if (mounted) {
+                          _showSuccess('Đã đặt nhắc vận động mỗi 2 giờ');
                         }
                       },
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppSpacing.sm),
 
                     _buildNotificationCard(
                       '😊 Nhắc ghi tâm trạng',
                       'Nhắc bạn ghi lại cảm xúc vào buổi sáng và tối',
                       Icons.mood,
-                      Colors.blue,
+                      AppColors.primary,
                       () async {
                         await NotificationService.instance
                             .scheduleMoodReminders();
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content:
-                                  Text('Đã đặt nhắc ghi tâm trạng (9h & 20h)'),
-                              backgroundColor: Color(0xFF2575FC),
-                            ),
-                          );
+                        if (mounted) {
+                          _showSuccess('Đã đặt nhắc ghi tâm trạng (9h & 20h)');
                         }
                       },
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.md),
 
                     // Lịch sử giám sát
-                    const Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Lịch sử giám sát',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
+                    SectionHeader(title: 'Lịch sử giám sát'),
+                    const SizedBox(height: AppSpacing.md),
 
                     // Danh sách dữ liệu
                     _healthData.isEmpty
-                        ? const Padding(
-                            padding: EdgeInsets.all(20),
-                            child: Text(
-                              'Chưa có dữ liệu sức khỏe',
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontSize: 16,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
+                        ? EmptyState(
+                            icon: Icons.health_and_safety,
+                            title: 'Chưa có dữ liệu sức khỏe',
+                            message: 'Hãy thêm dữ liệu mới để bắt đầu theo dõi',
                           )
                         : ListView.builder(
                             shrinkWrap: true,
@@ -519,28 +582,29 @@ class _HealthScreenState extends State<HealthScreen> {
                             itemCount: _healthData.length,
                             itemBuilder: (context, index) {
                               final data = _healthData[index];
-                              return Card(
-                                elevation: 2,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                margin: const EdgeInsets.only(bottom: 8),
+                              return AppCard(
+                                margin: const EdgeInsets.only(
+                                    bottom: AppSpacing.sm),
                                 child: ListTile(
-                                  contentPadding: const EdgeInsets.all(16),
+                                  contentPadding: EdgeInsets.zero,
                                   leading: Container(
-                                    width: 40,
-                                    height: 40,
+                                    width: 48,
+                                    height: 48,
                                     decoration: BoxDecoration(
-                                      color:
-                                          const Color(0xFF2575FC).withAlpha(1),
-                                      borderRadius: BorderRadius.circular(10),
+                                      color: AppColors.primary
+                                          .withValues(alpha: 0.1),
+                                      borderRadius:
+                                          BorderRadius.circular(AppRadius.md),
                                     ),
-                                    child: const Icon(Icons.calendar_today,
-                                        color: Color(0xFF2575FC), size: 20),
+                                    child: const Icon(
+                                      Icons.calendar_today,
+                                      color: AppColors.primary,
+                                      size: 24,
+                                    ),
                                   ),
                                   title: Text(
                                     DateFormat('dd/MM/yyyy').format(data.date),
-                                    style: const TextStyle(
+                                    style: AppTextStyles.bodyMedium.copyWith(
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -548,13 +612,54 @@ class _HealthScreenState extends State<HealthScreen> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      const SizedBox(height: 4),
-                                      _buildDataRow(Icons.directions_walk,
-                                          '${data.steps} bước'),
-                                      _buildDataRow(Icons.monitor_weight,
-                                          '${data.weight} kg'),
-                                      _buildDataRow(Icons.bedtime,
-                                          '${data.sleepHours} giờ'),
+                                      const SizedBox(height: AppSpacing.xs),
+                                      _buildDataRow(
+                                        Icons.directions_walk,
+                                        '${data.steps} bước',
+                                        AppColors.steps,
+                                      ),
+                                      _buildDataRow(
+                                        Icons.monitor_weight,
+                                        '${data.weight} kg',
+                                        AppColors.weight,
+                                      ),
+                                      _buildDataRow(
+                                        Icons.bedtime,
+                                        '${data.sleepHours.toStringAsFixed(1)} giờ',
+                                        AppColors.sleep,
+                                      ),
+                                      if (data.height != null)
+                                        _buildDataRow(
+                                          Icons.height,
+                                          '${data.height!.toStringAsFixed(0)} cm',
+                                          AppColors.info,
+                                        ),
+                                      if (data.systolicBP != null &&
+                                          data.diastolicBP != null)
+                                        _buildDataRow(
+                                          Icons.favorite,
+                                          '${data.systolicBP}/${data.diastolicBP} mmHg',
+                                          AppColors.error,
+                                        ),
+                                      if (data.heartRate != null)
+                                        _buildDataRow(
+                                          Icons.favorite,
+                                          '${data.heartRate} bpm',
+                                          AppColors.error,
+                                        ),
+                                      if (data.waterIntake != null)
+                                        _buildDataRow(
+                                          Icons.water_drop,
+                                          '${data.waterIntake!.toStringAsFixed(0)} ml',
+                                          AppColors.water,
+                                        ),
+                                      if (data.caloriesIn != null ||
+                                          data.caloriesOut != null)
+                                        _buildDataRow(
+                                          Icons.local_fire_department,
+                                          'Nạp: ${data.caloriesIn ?? 0} | Tiêu: ${data.caloriesOut ?? 0}',
+                                          AppColors.warning,
+                                        ),
                                     ],
                                   ),
                                 ),
@@ -562,7 +667,7 @@ class _HealthScreenState extends State<HealthScreen> {
                             },
                           ),
 
-                    // Thêm khoảng trống phía dưới để không bị bottom navigation che
+                    // Thêm khoảng trống phía dưới
                     const SizedBox(height: 80),
                   ],
                 ),
@@ -570,10 +675,10 @@ class _HealthScreenState extends State<HealthScreen> {
             ),
           ),
 
-          // Bottom Navigation cố định phía dưới
+          // Bottom Navigation
           Container(
             width: double.infinity,
-            color: Colors.grey[50],
+            color: AppColors.background,
             child: CustomBottomNavigationBar(
               currentIndex: _selectedBottomIndex,
               onTap: _onBottomNavTap,
@@ -584,39 +689,18 @@ class _HealthScreenState extends State<HealthScreen> {
     );
   }
 
-  Widget _buildInputField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    required Color color,
-  }) {
-    return TextFormField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: color),
-        filled: true,
-        fillColor: Colors.grey[50],
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      ),
-      keyboardType: TextInputType.number,
-      validator: (value) => _validateNumber(value, label),
-    );
-  }
-
-  Widget _buildDataRow(IconData icon, String value) {
+  Widget _buildDataRow(IconData icon, String value, Color color) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
+      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: Colors.grey),
-          const SizedBox(width: 6),
-          Text(value, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            value,
+            style:
+                AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+          ),
         ],
       ),
     );
@@ -627,6 +711,13 @@ class _HealthScreenState extends State<HealthScreen> {
     _stepsCtrl.dispose();
     _weightCtrl.dispose();
     _sleepCtrl.dispose();
+    _heightCtrl.dispose();
+    _systolicBPCtrl.dispose();
+    _diastolicBPCtrl.dispose();
+    _heartRateCtrl.dispose();
+    _waterIntakeCtrl.dispose();
+    _caloriesInCtrl.dispose();
+    _caloriesOutCtrl.dispose();
     super.dispose();
   }
 }

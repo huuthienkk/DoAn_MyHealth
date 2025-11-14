@@ -35,6 +35,26 @@ dependencies:
   intl: ^0.18.1
   image_picker: ^1.2.0
   image: ^4.0.17
+  
+  # 🤖 AI/ML
+  # tflite_flutter: ^0.10.4  # Tạm thời comment do lỗi tương thích
+  # Sử dụng mock service thay thế
+  
+  # 📄 Export & Reports
+  pdf: ^3.10.7
+  csv: ^5.0.2
+  path_provider: ^2.1.1
+  permission_handler: ^11.1.0
+  file_picker: ^10.3.6
+  open_file: ^3.3.2
+  
+  # 🔐 Authentication
+  google_sign_in: ^6.2.1
+  local_auth: ^2.2.0
+  
+  # 💾 Offline Storage
+  sqflite: ^2.3.0
+  path: ^1.8.3
 
 dev_dependencies:
   flutter_test:

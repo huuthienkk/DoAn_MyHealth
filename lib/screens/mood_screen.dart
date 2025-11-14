@@ -4,6 +4,14 @@ import '../controllers/mood_controller.dart';
 import '../models/mood_model.dart';
 import 'package:intl/intl.dart';
 import '../widgets/common/bottom_navigation_bar.dart';
+import '../widgets/common/app_card.dart';
+import '../widgets/common/app_button.dart';
+import '../widgets/common/app_text_field.dart';
+import '../widgets/common/app_app_bar.dart';
+import '../widgets/common/section_header.dart';
+import '../widgets/common/empty_state.dart';
+import '../widgets/common/loading_state.dart';
+import '../utils/constants.dart';
 import 'home_screen.dart';
 import 'health_screen.dart';
 import 'food_recognizer_screen.dart';
@@ -27,17 +35,17 @@ class _MoodScreenState extends State<MoodScreen> {
   final Map<String, Map<String, dynamic>> _moodData = {
     'Vui': {
       'icon': Icons.sentiment_very_satisfied,
-      'color': Colors.green,
+      'color': AppColors.happy,
       'emoji': '😊'
     },
     'Bình thường': {
       'icon': Icons.sentiment_neutral,
-      'color': Colors.blue,
+      'color': AppColors.neutral,
       'emoji': '😐'
     },
     'Buồn': {
       'icon': Icons.sentiment_very_dissatisfied,
-      'color': Colors.orange,
+      'color': AppColors.sad,
       'emoji': '😔'
     },
   };
@@ -64,7 +72,17 @@ class _MoodScreenState extends State<MoodScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.success,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -86,13 +104,7 @@ class _MoodScreenState extends State<MoodScreen> {
       await _loadMood();
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đã lưu tâm trạng thành công!'),
-          backgroundColor: Color(0xFF2575FC),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      _showSuccess('Đã lưu tâm trạng thành công!');
     } catch (e) {
       _showError('Không thể lưu dữ liệu: $e');
     } finally {
@@ -101,9 +113,9 @@ class _MoodScreenState extends State<MoodScreen> {
   }
 
   Color _getStressColor(int level) {
-    if (level <= 3) return Colors.green;
-    if (level <= 7) return Colors.orange;
-    return Colors.red;
+    if (level <= 3) return AppColors.success;
+    if (level <= 7) return AppColors.warning;
+    return AppColors.error;
   }
 
   String _getStressLabel(int level) {
@@ -157,60 +169,50 @@ class _MoodScreenState extends State<MoodScreen> {
     final latestMood = todayMoods.last;
     final moodInfo = _moodData[latestMood.mood] ?? _moodData['Bình thường']!;
 
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: moodInfo['color'].withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                moodInfo['icon'],
-                color: moodInfo['color'],
-                size: 32,
-              ),
+    return AppCard(
+      child: Row(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: moodInfo['color'].withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Tâm trạng hôm nay',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${moodInfo['emoji']} ${latestMood.mood}',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Mức stress: ${_getStressLabel(latestMood.stressLevel)}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: _getStressColor(latestMood.stressLevel),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
+            child: Icon(
+              moodInfo['icon'],
+              color: moodInfo['color'],
+              size: 32,
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Tâm trạng hôm nay',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  '${moodInfo['emoji']} ${latestMood.mood}',
+                  style: AppTextStyles.h4,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Mức stress: ${_getStressLabel(latestMood.stressLevel)}',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: _getStressColor(latestMood.stressLevel),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -218,294 +220,193 @@ class _MoodScreenState extends State<MoodScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text(
-          'Theo dõi tâm trạng',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
+      backgroundColor: AppColors.background,
+      appBar: AppAppBar(
+        title: 'Theo dõi tâm trạng',
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
-            );
-          },
-        ),
+        onBackPressed: () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+          );
+        },
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.black),
+          AppIconButton(
+            icon: Icons.refresh,
             onPressed: _loadMood,
+            tooltip: 'Làm mới',
           ),
+          const SizedBox(width: AppSpacing.sm),
         ],
       ),
       body: Column(
         children: [
-          // Nội dung chính có thể cuộn
           Expanded(
             child: RefreshIndicator(
               onRefresh: _loadMood,
-              color: const Color(0xFF2575FC),
+              color: AppColors.primary,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   children: [
                     // Thống kê tâm trạng hôm nay
                     _buildMoodStats(),
-                    if (_history.isNotEmpty) const SizedBox(height: 16),
+                    if (_history.isNotEmpty) const SizedBox(height: AppSpacing.md),
 
                     // Card chọn tâm trạng
-                    Card(
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Bạn cảm thấy thế nào?',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: _moodData.entries.map((entry) {
-                                final isSelected = _selectedMood == entry.key;
-                                final moodInfo = entry.value;
-                                return GestureDetector(
-                                  onTap: () =>
-                                      setState(() => _selectedMood = entry.key),
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 300),
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
+                    AppCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Bạn cảm thấy thế nào?', style: AppTextStyles.h4),
+                          const SizedBox(height: AppSpacing.md),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: _moodData.entries.map((entry) {
+                              final isSelected = _selectedMood == entry.key;
+                              final moodInfo = entry.value;
+                              return GestureDetector(
+                                onTap: () =>
+                                    setState(() => _selectedMood = entry.key),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 300),
+                                  padding: const EdgeInsets.all(AppSpacing.md),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? moodInfo['color'].withValues(alpha: 0.1)
+                                        : AppColors.background,
+                                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                                    border: Border.all(
                                       color: isSelected
-                                          ? moodInfo['color'].withOpacity(0.1)
-                                          : Colors.grey[50],
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(
-                                        color: isSelected
-                                            ? moodInfo['color']
-                                            : Colors.transparent,
-                                        width: 2,
+                                          ? moodInfo['color']
+                                          : Colors.transparent,
+                                      width: 2,
+                                    ),
+                                    boxShadow: isSelected
+                                        ? [
+                                            BoxShadow(
+                                              color: moodInfo['color']
+                                                  .withValues(alpha: 0.2),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ]
+                                        : [],
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        moodInfo['icon'],
+                                        size: 36,
+                                        color: moodInfo['color'],
                                       ),
-                                      boxShadow: isSelected
-                                          ? [
-                                              BoxShadow(
-                                                color: moodInfo['color']
-                                                    .withOpacity(0.2),
-                                                blurRadius: 8,
-                                                offset: const Offset(0, 2),
-                                              ),
-                                            ]
-                                          : [],
-                                    ),
-                                    child: Column(
-                                      children: [
-                                        Icon(
-                                          moodInfo['icon'],
-                                          size: 36,
-                                          color: moodInfo['color'],
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          entry.key,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w500,
-                                            color: isSelected
-                                                ? moodInfo['color']
-                                                : Colors.grey[700],
-                                          ),
-                                        ),
-                                        Text(
-                                          moodInfo['emoji'],
-                                          style: const TextStyle(fontSize: 16),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                            const SizedBox(height: 24),
-
-                            // Thanh trượt stress level
-                            const Text(
-                              'Mức độ stress',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Thư giãn',
-                                  style: TextStyle(
-                                    color: Colors.green,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                Text(
-                                  '$_stress - ${_getStressLabel(_stress)}',
-                                  style: TextStyle(
-                                    color: _getStressColor(_stress),
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text(
-                                  'Căng thẳng',
-                                  style: TextStyle(
-                                    color: Colors.red,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SliderTheme(
-                              data: SliderTheme.of(context).copyWith(
-                                activeTrackColor: _getStressColor(_stress),
-                                inactiveTrackColor: Colors.grey[300],
-                                thumbColor: _getStressColor(_stress),
-                                overlayColor:
-                                    _getStressColor(_stress).withAlpha(1),
-                                trackHeight: 6,
-                                thumbShape: const RoundSliderThumbShape(
-                                  enabledThumbRadius: 12,
-                                ),
-                              ),
-                              child: Slider(
-                                value: _stress.toDouble(),
-                                min: 1,
-                                max: 10,
-                                divisions: 9,
-                                onChanged: (val) =>
-                                    setState(() => _stress = val.toInt()),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-
-                            // Ghi chú
-                            TextFormField(
-                              controller: _noteCtrl,
-                              maxLines: 3,
-                              decoration: InputDecoration(
-                                labelText: 'Ghi chú cảm xúc',
-                                hintText: 'Hãy chia sẻ cảm xúc của bạn...',
-                                filled: true,
-                                fillColor: Colors.grey[50],
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide.none,
-                                ),
-                                contentPadding: const EdgeInsets.all(16),
-                              ),
-                              // Cấu hình nâng cao cho tiếng Việt
-                              keyboardType: TextInputType.multiline,
-                              textInputAction: TextInputAction.done,
-                              enableSuggestions: true,
-                              autocorrect: true,
-                              enableInteractiveSelection: true,
-                              textCapitalization: TextCapitalization.sentences,
-                              // Quan trọng: cấu hình input formatters
-                              inputFormatters: [],
-                            ),
-                            const SizedBox(height: 20),
-
-                            // Nút lưu
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: _saveMood,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF2575FC),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 16),
-                                  elevation: 3,
-                                ),
-                                child: _loading
-                                    ? const SizedBox(
-                                        height: 20,
-                                        width: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                            Colors.white,
-                                          ),
-                                        ),
-                                      )
-                                    : const Text(
-                                        'LƯU TÂM TRẠNG',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
+                                      const SizedBox(height: AppSpacing.sm),
+                                      Text(
+                                        entry.key,
+                                        style: AppTextStyles.bodySmall.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          color: isSelected
+                                              ? moodInfo['color']
+                                              : AppColors.textSecondary,
                                         ),
                                       ),
+                                      Text(
+                                        moodInfo['emoji'],
+                                        style: AppTextStyles.bodyLarge,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+
+                          // Thanh trượt stress level
+                          Text('Mức độ stress', style: AppTextStyles.h4),
+                          const SizedBox(height: AppSpacing.sm),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Thư giãn',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.success,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                '$_stress - ${_getStressLabel(_stress)}',
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: _getStressColor(_stress),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                'Căng thẳng',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.error,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SliderTheme(
+                            data: SliderTheme.of(context).copyWith(
+                              activeTrackColor: _getStressColor(_stress),
+                              inactiveTrackColor: AppColors.border,
+                              thumbColor: _getStressColor(_stress),
+                              overlayColor:
+                                  _getStressColor(_stress).withValues(alpha: 0.1),
+                              trackHeight: 6,
+                              thumbShape: const RoundSliderThumbShape(
+                                enabledThumbRadius: 12,
                               ),
                             ),
-                          ],
-                        ),
+                            child: Slider(
+                              value: _stress.toDouble(),
+                              min: 1,
+                              max: 10,
+                              divisions: 9,
+                              onChanged: (val) =>
+                                  setState(() => _stress = val.toInt()),
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+
+                          // Ghi chú
+                          AppTextField(
+                            controller: _noteCtrl,
+                            labelText: 'Ghi chú cảm xúc',
+                            hintText: 'Hãy chia sẻ cảm xúc của bạn...',
+                            maxLines: 3,
+                            textCapitalization: TextCapitalization.sentences,
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+
+                          // Nút lưu
+                          AppButton(
+                            text: 'LƯU TÂM TRẠNG',
+                            onPressed: _saveMood,
+                            isLoading: _loading,
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.md),
 
                     // Lịch sử tâm trạng
-                    const Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Lịch sử tâm trạng',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
+                    SectionHeader(title: 'Lịch sử tâm trạng'),
+                    const SizedBox(height: AppSpacing.md),
 
                     if (_loading)
-                      const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(20),
-                          child: CircularProgressIndicator(
-                            color: Color(0xFF2575FC),
-                          ),
-                        ),
-                      )
+                      const LoadingState(message: 'Đang tải dữ liệu...')
                     else if (_history.isEmpty)
-                      Card(
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Padding(
-                          padding: EdgeInsets.all(20),
-                          child: Text(
-                            'Chưa có dữ liệu tâm trạng nào.',
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 16,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
+                      EmptyState(
+                        icon: Icons.mood,
+                        title: 'Chưa có dữ liệu tâm trạng',
+                        message: 'Hãy ghi lại cảm xúc của bạn để bắt đầu theo dõi',
                       )
                     else
                       ListView.builder(
@@ -517,20 +418,16 @@ class _MoodScreenState extends State<MoodScreen> {
                           final moodInfo =
                               _moodData[data.mood] ?? _moodData['Bình thường']!;
 
-                          return Card(
-                            elevation: 2,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            margin: const EdgeInsets.only(bottom: 8),
+                          return AppCard(
+                            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
                             child: ListTile(
-                              contentPadding: const EdgeInsets.all(16),
+                              contentPadding: EdgeInsets.zero,
                               leading: Container(
-                                width: 50,
-                                height: 50,
+                                width: 48,
+                                height: 48,
                                 decoration: BoxDecoration(
-                                  color: moodInfo['color'].withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(10),
+                                  color: moodInfo['color'].withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
                                 ),
                                 child: Icon(
                                   moodInfo['icon'],
@@ -539,51 +436,42 @@ class _MoodScreenState extends State<MoodScreen> {
                                 ),
                               ),
                               title: Text(
-                                DateFormat('dd/MM/yyyy - HH:mm')
-                                    .format(data.date),
-                                style: const TextStyle(
+                                DateFormat('dd/MM/yyyy - HH:mm').format(data.date),
+                                style: AppTextStyles.bodyMedium.copyWith(
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: AppSpacing.xs),
                                   Text(
                                     '${moodInfo['emoji']} ${data.mood}',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                  const SizedBox(height: 2),
+                                  const SizedBox(height: AppSpacing.xs),
                                   Row(
                                     children: [
                                       Text(
                                         'Stress: ',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[600],
-                                        ),
+                                        style: AppTextStyles.caption,
                                       ),
                                       Text(
                                         '${data.stressLevel} - ${_getStressLabel(data.stressLevel)}',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color:
-                                              _getStressColor(data.stressLevel),
-                                          fontWeight: FontWeight.w500,
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: _getStressColor(data.stressLevel),
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
                                     ],
                                   ),
                                   if (data.note.isNotEmpty) ...[
-                                    const SizedBox(height: 4),
+                                    const SizedBox(height: AppSpacing.xs),
                                     Text(
                                       data.note,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey[700],
+                                      style: AppTextStyles.caption.copyWith(
                                         fontStyle: FontStyle.italic,
                                       ),
                                       maxLines: 2,
@@ -597,7 +485,7 @@ class _MoodScreenState extends State<MoodScreen> {
                         },
                       ),
 
-                    // Thêm khoảng trống phía dưới để không bị bottom navigation che
+                    // Thêm khoảng trống phía dưới
                     const SizedBox(height: 80),
                   ],
                 ),
@@ -605,10 +493,10 @@ class _MoodScreenState extends State<MoodScreen> {
             ),
           ),
 
-          // Bottom Navigation cố định phía dưới
+          // Bottom Navigation
           Container(
             width: double.infinity,
-            color: Colors.grey[50],
+            color: AppColors.background,
             child: CustomBottomNavigationBar(
               currentIndex: _selectedBottomIndex,
               onTap: _onBottomNavTap,
